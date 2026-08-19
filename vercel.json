@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/nightly",
+      "schedule": "0 23 * * *"
+    }
+  ],
+  "functions": {
+    "api/telegram.js": {
+      "maxDuration": 60
+    },
+    "api/nightly.js": {
+      "maxDuration": 60
+    }
+  }
+}

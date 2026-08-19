@@ -1,0 +1,15 @@
+{
+  "name": "telegram-notion-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "scripts": {
+    "verify": "node --env-file=.env scripts/verify.js",
+    "webhook:set": "node --env-file=.env scripts/setup-webhook.js",
+    "webhook:info": "node --env-file=.env scripts/setup-webhook.js info",
+    "webhook:delete": "node --env-file=.env scripts/setup-webhook.js delete"
+  }
+}
