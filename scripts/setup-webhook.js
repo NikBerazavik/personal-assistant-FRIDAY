@@ -40,9 +40,9 @@ if (command === "set") {
   const result = await api("setWebhook", {
     url,
     secret_token: secret,
-    // We only care about messages; ignoring other update types keeps
-    // pointless invocations off your function count.
-    allowed_updates: ["message", "edited_message"],
+    // Only new messages. Edits are deliberately excluded: re-running an edited
+    // "add task X" would create the task a second time.
+    allowed_updates: ["message"],
     drop_pending_updates: true,
   });
 
