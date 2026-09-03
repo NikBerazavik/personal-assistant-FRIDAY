@@ -11,6 +11,9 @@ const HELP = [
   '- "what\'s overdue?"',
   '- "anything unscheduled?"',
   '- "what projects do I have?"',
+  "",
+  "Tasks are Personal unless you say work or it sounds like work.",
+  'Reply to one of my messages to follow up on it, e.g. "move it to 4pm".',
 ].join("\n");
 
 export default async function handler(req, res) {
@@ -18,13 +21,22 @@ export default async function handler(req, res) {
 
   // --- Auth gate 1: the secret token Telegram echoes back on every call. ---
   // Without this, anyone who discovers your Vercel URL can POST fake updates.
+  // The config getter throws if the secret is unset, so a missing env var
+  // fails closed instead of matching a missing header.
   const secret = req.headers["x-telegram-bot-api-secret-token"];
-  if (secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+  if (!secret || secret !== config.telegram.webhookSecret()) {
     console.warn("Rejected webhook call with bad or missing secret token.");
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const message = req.body?.message || req.body?.edited_message;
+  // Edits are ignored on purpose: re-running an edited "add task X" would
+  // create it a second time. The webhook only subscribes to "message", but
+  // an older registration may still deliver edits.
+  if (req.body?.edited_message) {
+    return res.status(200).json({ ok: true });
+  }
+
+  const message = req.body?.message;
   const text = message?.text?.trim();
 
   // --- Auth gate 2: only you. Your bot's username is discoverable, so this ---
@@ -44,8 +56,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    const { text: reply, usage } = await runAgent(text);
-    console.log(`Handled message. Tokens in=${usage.input} out=${usage.output}`);
+    // When the user replies to a message, Telegram attaches the original.
+    // Forwarding it is what makes "move it to 4pm" resolvable.
+    const quoted = message.reply_to_message;
+    const replyTo = quoted?.text
+      ? { text: quoted.text, fromBot: Boolean(quoted.from?.is_bot) }
+      : undefined;
+
+    const { text: reply, usage } = await runAgent(text, { replyTo });
+    console.log(
+      `Handled message${replyTo ? " (with reply context)" : ""}. Tokens in=${usage.input} out=${usage.output}`
+    );
     await sendMessage(reply);
   } catch (err) {
     console.error("Handler error:", err);

@@ -56,6 +56,7 @@ async function generateRecurring() {
         priority: latest.priority,
         recurring: latest.recurring,
         tags: latest.tags,
+        notes: latest.notes,
       });
       created.push(`${name} -> ${next}`);
     } catch (err) {
