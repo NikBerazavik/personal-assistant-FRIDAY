@@ -232,8 +232,10 @@ header `Authorization: Bearer <CRON_SECRET>`. `CRON_SECRET` must be set in
 Vercel; endpoints reject requests without it.
 
 Slots live in `lib/schedule.js`: 09:00 (full brief), 11:00, 12:30, 15:00, 18:00,
-21:00. Each later slot lists timed tasks starting before the next slot, and
-stays silent if there are none. Give a task a time in Notion's Date field for it
+21:00. Each later slot sends two parts: "Coming up" (timed tasks starting between
+that slot + 30 min and the next slot + 30 min) and "After that" (the window
+following it). The 30-minute lead (`LEAD_MIN`) means nothing is announced with
+less than 30 minutes notice. It stays silent if both parts are empty. Give a task a time in Notion's Date field for it
 to be reminded; all-day tasks only appear in the 09:00 brief.
 
 Test without sending: `/api/tick?slot=11:00&dry=1`.
