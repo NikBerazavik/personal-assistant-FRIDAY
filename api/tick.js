@@ -1,0 +1,55 @@
+import { runMorningBrief } from "../lib/brief.js";
+import { getTasks } from "../lib/notion.js";
+import { sendMessage } from "../lib/telegram.js";
+import { authorized } from "../lib/auth.js";
+import { today } from "../lib/dates.js";
+import {
+  BRIEF_SLOT,
+  SLOTS,
+  dueSlot,
+  slotWindow,
+  tasksInWindow,
+  formatReminder,
+} from "../lib/schedule.js";
+
+// Called every 30 minutes by an external scheduler (see README). Does nothing
+// unless a slot is due. Deterministic, no Claude call.
+//
+// Testing: ?slot=11:00 forces a slot; &dry=1 returns the message instead of
+// sending it.
+export default async function handler(req, res) {
+  if (!authorized(req)) return res.status(401).json({ error: "Unauthorized" });
+
+  const url = new URL(req.url, "http://localhost");
+  const forced = url.searchParams.get("slot");
+  const dry = url.searchParams.get("dry") === "1";
+  if (forced && !SLOTS.includes(forced)) {
+    return res.status(400).json({ error: `slot must be one of ${SLOTS.join(", ")}` });
+  }
+
+  const slot = forced || dueSlot();
+  if (!slot) return res.status(200).json({ ok: true, slot: null });
+
+  try {
+    if (slot === BRIEF_SLOT) {
+      if (dry) return res.status(200).json({ ok: true, slot, note: "brief (dry run, not generated)" });
+      return res.status(200).json({ ok: true, slot, ...(await runMorningBrief()) });
+    }
+
+    const date = today();
+    const { start, end, endDate } = slotWindow(slot, date);
+    const tasks = await getTasks({ date_from: date, date_to: endDate });
+    const due = tasksInWindow(tasks, start, end);
+
+    if (due.length === 0) return res.status(200).json({ ok: true, slot, sent: false });
+
+    const message = formatReminder(slot, due, endDate, date);
+    if (dry) return res.status(200).json({ ok: true, slot, sent: false, message });
+    await sendMessage(message);
+    return res.status(200).json({ ok: true, slot, sent: true, count: due.length });
+  } catch (err) {
+    console.error(`Tick ${slot} failed:`, err);
+    await sendMessage(`Reminder check (${slot}) failed: ${err.message}`).catch(() => {});
+    return res.status(500).json({ error: err.message });
+  }
+}

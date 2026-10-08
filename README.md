@@ -21,10 +21,10 @@ Telegram  ──POST──▶  /api/telegram  ──▶  Claude (tool use loop)
                           │                      ▼
                           └──◀── reply ───  Notion REST API
 
-Vercel Cron (daily) ──▶  /api/nightly  ──▶  Notion  ──▶  Telegram
+cron-job.org (every 30 min) ──▶  /api/tick  ──▶  Notion  ──▶  Telegram
 ```
 
-`/api/telegram` is conversational and uses Claude. `/api/nightly` is
+`/api/telegram` is conversational and uses Claude. `/api/tick` (and `/api/nightly`) are
 deterministic and does not — a morning brief should be correct and free, not
 occasionally creative.
 
@@ -39,7 +39,10 @@ occasionally creative.
 | `lib/agent.js` | System prompt and the tool-use loop |
 | `lib/telegram.js` | Message sending with 4096-char chunking |
 | `api/telegram.js` | Webhook endpoint |
-| `api/nightly.js` | Cron endpoint: brief + recurring task generation |
+| `api/tick.js` | Called every 30 min; sends the 09:00 brief or a quiet reminder for the due slot |
+| `api/nightly.js` | Manual trigger for the morning brief |
+| `lib/schedule.js` | Reminder slots and window logic (edit times here) |
+| `lib/brief.js` | Brief + recurring task generation |
 | `scripts/verify.js` | Preflight check — run before deploying |
 | `scripts/setup-webhook.js` | Register / inspect / delete the webhook |
 
@@ -153,8 +156,9 @@ git push -u origin main
 
 On **vercel.com** → Add New Project → import the repo. Then
 **Settings → Environment Variables**: add everything from `.env` *except*
-`DEPLOY_URL` and `CRON_SECRET` (Vercel generates `CRON_SECRET` itself once it
-sees the `crons` block). Deploy.
+`DEPLOY_URL`. Also add `CRON_SECRET` yourself (e.g. `openssl rand -hex 32`);
+Vercel does not generate it, and the cron endpoints reject requests without it.
+Deploy.
 
 ### 6. Register the webhook
 
@@ -216,3 +220,20 @@ CRUD, Haiku is the right size.
 | Missing property errors | `npm run verify` compares config against the live schema |
 | Brief arrives at the wrong hour | Cron is UTC; subtract 7 from your Bangkok target |
 | No brief at all | Hobby cron timing is only guaranteed within the hour |
+
+---
+
+## Reminder schedule
+
+Vercel's free plan allows one cron run per day with up to an hour of drift, so
+there is no `crons` entry in `vercel.json`. Instead an external scheduler
+(cron-job.org, free) calls `GET <DEPLOY_URL>/api/tick` every 30 minutes with the
+header `Authorization: Bearer <CRON_SECRET>`. `CRON_SECRET` must be set in
+Vercel; endpoints reject requests without it.
+
+Slots live in `lib/schedule.js`: 09:00 (full brief), 11:00, 12:30, 15:00, 18:00,
+21:00. Each later slot lists timed tasks starting before the next slot, and
+stays silent if there are none. Give a task a time in Notion's Date field for it
+to be reminded; all-day tasks only appear in the 09:00 brief.
+
+Test without sending: `/api/tick?slot=11:00&dry=1`.
