@@ -7,7 +7,8 @@ import {
   BRIEF_SLOT,
   SLOTS,
   dueSlot,
-  slotWindow,
+  slotWindows,
+  localDate,
   tasksInWindow,
   formatReminder,
 } from "../lib/schedule.js";
@@ -37,16 +38,21 @@ export default async function handler(req, res) {
     }
 
     const date = today();
-    const { start, end, endDate } = slotWindow(slot, date);
-    const tasks = await getTasks({ date_from: date, date_to: endDate });
-    const due = tasksInWindow(tasks, start, end);
+    const windows = slotWindows(slot, date);
+    const lastEnd = windows[windows.length - 1].end;
+    const tasks = await getTasks({ date_from: date, date_to: localDate(lastEnd) });
+    const groups = windows.map((window) => ({
+      window,
+      tasks: tasksInWindow(tasks, window.start, window.end),
+    }));
+    const count = groups.reduce((n, g) => n + g.tasks.length, 0);
 
-    if (due.length === 0) return res.status(200).json({ ok: true, slot, sent: false });
+    if (count === 0) return res.status(200).json({ ok: true, slot, sent: false });
 
-    const message = formatReminder(slot, due, endDate, date);
+    const message = formatReminder(groups, date);
     if (dry) return res.status(200).json({ ok: true, slot, sent: false, message });
     await sendMessage(message);
-    return res.status(200).json({ ok: true, slot, sent: true, count: due.length });
+    return res.status(200).json({ ok: true, slot, sent: true, count });
   } catch (err) {
     console.error(`Tick ${slot} failed:`, err);
     await sendMessage(`Reminder check (${slot}) failed: ${err.message}`).catch(() => {});
