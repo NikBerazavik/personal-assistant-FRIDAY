@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Preflight check. Run this BEFORE deploying:  npm run verify
 //
-// It catches the failures that would otherwise surface as a silent 6am
+// It catches the failures that would otherwise surface as a silent 9am
 // no-message: a typo'd property name, a database the integration was never
 // connected to, a bad token.
 // ---------------------------------------------------------------------------
@@ -9,6 +9,7 @@
 import { config } from "../lib/config.js";
 import { notionRequest, resolveDataSourceId, getTasks, listProjects } from "../lib/notion.js";
 import { today, nowLocal } from "../lib/dates.js";
+import { openStore } from "../lib/state.js";
 
 const ok = (m) => console.log(`  PASS  ${m}`);
 const bad = (m) => console.log(`  FAIL  ${m}`);
@@ -82,6 +83,10 @@ await check("Can query today's tasks", async () => {
 await check("Can list projects", async () => {
   const projects = await listProjects();
   return `${projects.length} project(s)`;
+});
+await check("State page readable (watcher memory, brief catch-up)", async () => {
+  const { state } = await openStore();
+  return `${Object.keys(state).length} key(s) stored`;
 });
 
 console.log("\nAnthropic");
