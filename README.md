@@ -234,8 +234,30 @@ Vercel; endpoints reject requests without it.
 Slots live in `lib/schedule.js`: 09:00 (full brief), 11:00, 12:30, 15:00, 18:00,
 21:00. Each later slot sends two parts: "Coming up" (timed tasks starting between
 that slot + 30 min and the next slot + 30 min) and "After that" (the window
-following it). The 30-minute lead (`LEAD_MIN`) means nothing is announced with
+following it). The 21:00 slot is different: it previews tomorrow morning
+(all-day tasks plus timed tasks from 00:00 to 12:30), plus anything timed later
+tonight. The 30-minute lead (`LEAD_MIN`) means nothing is announced with
 less than 30 minutes notice. It stays silent if both parts are empty. Give a task a time in Notion's Date field for it
 to be reminded; all-day tasks only appear in the 09:00 brief.
 
 Test without sending: `/api/tick?slot=11:00&dry=1`.
+
+## MacBook watcher
+
+At the 09:00 tick, `lib/watcher.js` reads https://compasia.co.th/collections/macbooks
+and sends a separate Telegram message when a new MacBook Pro appears that is a
+16 inch OR has an M4 or newer chip (edit `WANTED` in the file to change this).
+No AI involved. It also messages when the page lists products it cannot read
+(layout changed, scraper broken), when a product that is not a MacBook Pro, Air or
+Neo shows up (Air and Neo are ignored), and once a week as a "still alive" check
+if nothing else was sent. An empty shop (0 listings) is mentioned once a week, not
+daily.
+
+It remembers what it has already seen in a Notion page, since Vercel keeps no
+files between runs. One-time setup: create an empty standalone page in Notion (not inside the Tasks or Projects database), share it with
+the FRIDAY integration (Connections), copy its id from the URL and set
+`NOTION_STATE_PAGE_ID` in Vercel. The first run sends a "watcher started"
+message and does not alert on listings already there.
+
+Test without sending or saving: `/api/tick?slot=09:00&dry=1` (the `watcher` field
+shows what would be sent).
