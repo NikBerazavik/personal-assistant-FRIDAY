@@ -175,6 +175,23 @@ Message your bot `/help`, then try "what's on today?".
 If you had registered the webhook before, re-run `npm run webhook:set` once:
 the registration now subscribes to new messages only (not edits).
 
+### 7. Set up the scheduler (required)
+
+**Without this step the bot only answers messages. It sends no morning brief,
+no reminders, no 21:00 preview and no MacBook alerts.** Vercel's free plan can
+only run a job once a day, so an outside service has to call the bot every 30
+minutes.
+
+1. Create a free account at [cron-job.org](https://cron-job.org) → **Create cronjob**.
+2. URL: `<DEPLOY_URL>/api/tick`, method GET.
+3. Schedule: every 30 minutes (:00 and :30). Hourly is not enough: the 12:30
+   slot would never be hit.
+4. **Advanced → Headers**: key `Authorization`, value `Bearer <CRON_SECRET>`
+   (the same value as in Vercel, one space, no quotes).
+5. Turn on email notifications on failure.
+6. Save → **Test run**. It should return 200. A 401 means the header does not
+   match `CRON_SECRET` in Vercel.
+
 ---
 
 ## Cost
