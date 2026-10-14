@@ -8,7 +8,10 @@ changing scheduling or deployment.
 
 Nothing runs unless something calls it. Check these before blaming code:
 
-- `/api/telegram`: called by Telegram's webhook whenever the user messages the bot.
+- `/api/telegram`: called by Telegram's webhook whenever the user messages the bot
+  or taps a button. Taps only arrive if the webhook subscribes to
+  `callback_query` (`npm run webhook:info`); `/api/tick` re-registers it daily
+  if not.
 - `/api/tick`: must be called every 30 minutes by an **external scheduler**
   (cron-job.org) with `Authorization: Bearer <CRON_SECRET>`. It sends the morning
   brief, the slot reminders, the 21:00 preview and runs the MacBook watcher.
