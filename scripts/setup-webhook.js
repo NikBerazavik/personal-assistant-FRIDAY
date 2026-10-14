@@ -40,9 +40,10 @@ if (command === "set") {
   const result = await api("setWebhook", {
     url,
     secret_token: secret,
-    // Only new messages. Edits are deliberately excluded: re-running an edited
-    // "add task X" would create the task a second time.
-    allowed_updates: ["message"],
+    // New messages and button taps. Edits are deliberately excluded:
+    // re-running an edited "add task X" would create the task a second time.
+    // Keep in sync with WEBHOOK_UPDATES in lib/telegram.js.
+    allowed_updates: ["message", "callback_query"],
     drop_pending_updates: true,
   });
 
