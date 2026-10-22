@@ -342,3 +342,11 @@ message and does not alert on listings already there.
 
 Test without sending or saving: `/api/tick?slot=09:00&dry=1` (the `watcher` field
 shows what would be sent).
+
+To check on it, ask Friday in plain words ("is the MacBook watcher still
+running?"). When a message mentions the watcher, MacBook or CompAsia, the bot
+adds one line from the state page to Claude's instructions: the last successful
+run, whether today's run failed, how many listings were on the page and which
+ones match, and when the watcher last messaged you. Other messages do not get
+this line, so they cost nothing extra. No new tool was added, and no setup is
+needed.
