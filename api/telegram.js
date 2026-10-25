@@ -4,6 +4,7 @@ import { sendMessage, sendTyping, answerCallback, downloadFile } from "../lib/te
 import { handleCallback } from "../lib/buttons.js";
 import { openStore } from "../lib/state.js";
 import { recentExchanges, remember, alreadyHandled } from "../lib/chat.js";
+import { asksAboutWatcher, watcherStatus } from "../lib/watcher.js";
 
 const HELP = [
   "I manage your Notion tasks. Just talk to me normally:",
@@ -18,6 +19,8 @@ const HELP = [
   "Send a photo, screenshot or PDF (an invite, a poster, a booking) and I'll turn it into tasks. Add a caption to tell me what you want.",
   "",
   "Tap the buttons under my reminders to mark things done, push them an hour, move them to tomorrow, or drop them.",
+  "",
+  'Ask "is the MacBook watcher still running?" to see when it last checked CompAsia.',
   "",
   "Tasks are Personal unless you say work or it sounds like work.",
   'I remember the last few messages for an hour, so "make it 3pm" works right after adding something.',
@@ -179,6 +182,7 @@ async function onMessage(update) {
     replyTo,
     history: recentExchanges(store),
     attachments,
+    status: asksAboutWatcher(text, quotedText) ? watcherStatus(store) : undefined,
   });
   console.log(
     `Handled message${replyTo ? " (with reply context)" : ""}${attachments.length ? ` (with ${attachment.kind})` : ""}. Tokens in=${usage.input} out=${usage.output}`
